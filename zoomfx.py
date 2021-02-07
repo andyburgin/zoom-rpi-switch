@@ -7,9 +7,11 @@ import mido
 from time import sleep
 import RPi.GPIO as GPIO
 from time import sleep
+import os
 
 Inport = None
 Outport = None
+GPIOPWRDN = 22
 GPIOPREV = 23
 GPIONEXT = 24
 DEVICE_ID = 0x58 # 0x58=MS-50G , 0x61=MS-70CDR, 0x5F=MS-60B
@@ -19,6 +21,7 @@ def setupGPIO():
     global GPIONEXT
 
     GPIO.setmode(GPIO.BCM)
+    GPIO.setup(GPIOPWRDN, GPIO.IN)
     GPIO.setup(GPIOPREV, GPIO.IN)
     GPIO.setup(GPIONEXT, GPIO.IN)
 
@@ -118,6 +121,7 @@ def changePatch(dir):
 
 
 def main():
+    global GPIOPWRDN
     global GPIOPREV
     global GPIONEXT
 
@@ -128,6 +132,9 @@ def main():
     setupGPIO()
     try:
         while True:
+            if GPIO.input(GPIOPWRDN):
+                print("Power Down Button Pressed")
+                os.system("shutdown -h now")
             if GPIO.input(GPIOPREV):
                 print("Previous Button Pressed")
                 changePatch(-1)
