@@ -8,7 +8,6 @@ from time import sleep
 import RPi.GPIO as GPIO
 from time import sleep
 
-CurrentPatch = 0
 Inport = None
 Outport = None
 GPIOPREV = 23
@@ -50,7 +49,6 @@ def connectToZoom():
 def zoomParameterEditEnable():
     global Inport
     global Outport
-    global CurrentPatch
     global DEVICE_ID
 
     #Identity Request
@@ -67,9 +65,9 @@ def zoomParameterEditEnable():
 def getCurrentPatch():
     global Inport
     global Outport
-    global CurrentPatch
     global DEVICE_ID
 
+    currentPatch = 0
     zoomParameterEditEnable()
     # Request Current Program
     msg = mido.Message("sysex", data = [0x52,0x00,DEVICE_ID,0x33])
@@ -78,10 +76,12 @@ def getCurrentPatch():
         msg = Inport.receive()
         print("msg:",msg.hex())
         if msg.bytes()[0] == 192:
-            CurrentPatch = msg.bytes()[1]
-            print("Current Patch is:",CurrentPatch)
+            currentPatch = msg.bytes()[1]
+            print("Current Patch is:",currentPatch)
             break;
     zoomParameterEditDisable()
+
+    return currentPatch
 
 
 def zoomParameterEditDisable():
@@ -95,21 +95,23 @@ def zoomParameterEditDisable():
 
 
 def changePatch(dir):
-    global CurrentPatch
     global Outport
 
+    # Get the current patch
+    currentPatch = getCurrentPatch()
+
     # Adjust patch and wrap around min/max
-    CurrentPatch=CurrentPatch+dir
-    if CurrentPatch >49 :
-        CurrentPatch=0
-    if CurrentPatch<0:
-        CurrentPatch=49
-    print("Changing to Patch:",CurrentPatch)
+    currentPatch=currentPatch+dir
+    if currentPatch >49 :
+        currentPatch=0
+    if currentPatch<0:
+        currentPatch=49
+    print("Changing to Patch:",currentPatch)
 
     zoomParameterEditEnable()
   
     print("Changing patch")
-    msg = mido.Message.from_bytes([0xc0, CurrentPatch])
+    msg = mido.Message.from_bytes([0xc0, currentPatch])
     Outport.send(msg);
 
     zoomParameterEditDisable()
@@ -121,7 +123,6 @@ def main():
 
     # Setp up Zoom and get Current Patch
     connectToZoom()
-    getCurrentPatch()
 
     # Setup buttons and loop for presses
     setupGPIO()
