@@ -11,7 +11,7 @@ import os
 
 Inport = None
 Outport = None
-GPIOPWRDN = 22
+GPIOPWRDN = 17
 GPIOPREV = 23
 GPIONEXT = 24
 DEVICE_ID = 0x58 # 0x58=MS-50G , 0x61=MS-70CDR, 0x5F=MS-60B
