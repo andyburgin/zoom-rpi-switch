@@ -8,6 +8,9 @@ from time import sleep
 import RPi.GPIO as GPIO
 from time import sleep
 import os
+import logging
+from systemd.journal import JournaldLogHandler
+
 
 Inport = None
 Outport = None
@@ -32,21 +35,21 @@ def connectToZoom():
     global Outport
 
     for port in mido.get_input_names():
-        print("Checking:", port)
+        logging.info("Checking: %s", port)
         if port[:len(midiname)]==midiname:
             Inport = mido.open_input(port)
-            print("Using Input:", port)
+            logging.info("Using Input: %s", port)
             break
 
     for port in mido.get_output_names():
-        print("Checking:",port)
+        logging.info("Checking: %s",port)
         if port[:len(midiname)]==midiname:
             Outport = mido.open_output(port)
-            print("Using Output:", port)
+            logging.info("Using Output: %s", port)
             break
 
     if Inport == None or Outport == None:
-        print("Unable to find Pedal")
+        logging.info("Unable to find Pedal")
 
 
 def zoomParameterEditEnable():
@@ -57,12 +60,12 @@ def zoomParameterEditEnable():
     #Identity Request
     msg = mido.Message("sysex", data = [0x7e,0x00,0x06,0x01])
     Outport.send(msg); sleep(0); msg = Inport.receive()
-    print("msg:",msg.hex())
+    logging.info("msg: %s",msg.hex())
 
     # Parameter Edit Enable
     msg = mido.Message("sysex", data = [0x52,0x00,DEVICE_ID,0x50])
     Outport.send(msg); sleep(0);
-    print("sent edit enable")
+    logging.info("sent edit enable")
 
 
 def getCurrentPatch():
@@ -77,10 +80,10 @@ def getCurrentPatch():
     Outport.send(msg)
     while True:
         msg = Inport.receive()
-        print("msg:",msg.hex())
+        logging.info("msg: %s",msg.hex())
         if msg.bytes()[0] == 192:
             currentPatch = msg.bytes()[1]
-            print("Current Patch is:",currentPatch)
+            logging.info("Current Patch is: %s",currentPatch)
             break;
     zoomParameterEditDisable()
 
@@ -94,7 +97,7 @@ def zoomParameterEditDisable():
     # Parameter Edit Disable
     msg = mido.Message("sysex", data = [0x52,0x00,DEVICE_ID,0x51])
     Outport.send(msg); sleep(0);
-    print("sent edit disable")
+    logging.info("sent edit disable")
 
 
 def changePatch(dir):
@@ -109,11 +112,11 @@ def changePatch(dir):
         currentPatch=0
     if currentPatch<0:
         currentPatch=49
-    print("Changing to Patch:",currentPatch)
+    logging.info("Changing to Patch: %s",currentPatch)
 
     zoomParameterEditEnable()
   
-    print("Changing patch")
+    logging.info("Changing patch")
     msg = mido.Message.from_bytes([0xc0, currentPatch])
     Outport.send(msg);
 
@@ -125,6 +128,9 @@ def main():
     global GPIOPREV
     global GPIONEXT
 
+    # Setup Logging
+    logging.basicConfig(level="INFO")
+
     # Setp up Zoom and get Current Patch
     connectToZoom()
 
@@ -133,14 +139,14 @@ def main():
     try:
         while True:
             if GPIO.input(GPIOPWRDN):
-                print("Power Down Button Pressed")
+                logging.info("Power Down Button Pressed")
                 os.system("shutdown -h now")
             if GPIO.input(GPIOPREV):
-                print("Previous Button Pressed")
+                logging.info("Previous Button Pressed")
                 changePatch(-1)
                 sleep(0.5)
             if GPIO.input(GPIONEXT):
-                print("Next Button Pressed")
+                logging.info("Next Button Pressed")
                 changePatch(1)
                 sleep(0.5)
 
